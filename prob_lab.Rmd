@@ -165,7 +165,7 @@ conseguir_probabilidad = function(r, n, u) {
 
 
 #r = 10
-#n = 7
+n = 7
 #u = 2
 
 conseguir_probabilidad(r = 10 , n = 7 , u = 2) / n
