@@ -1,0 +1,410 @@
+---
+title: "Lab 1: probabilidad y variables aleatorias"
+author: Aquí, tu nombre
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Objetivos de la práctica
+La práctica consiste en una colección de problemas que deberán ser resueltos
+mediante simulaciones,  usando `sample` o bien las funciones `r[name]` asociadas
+a cada distribución (por ejemplo, `rnorm`). Los objetivos de esta práctica son, 
+por tanto:
+
+* Seguir familiarizándose con el lenguaje `R`.
+* Profundizar en el uso de simulaciones para calcular probabilidades.
+
+# Entrega y evaluación 
+El deadline para la entrega de la práctica se indica en el curso virtual. 
+Cualquier trabajo recibido **fuera del plazo contará como no entregado**. La
+entrega consistirá, **obligatoriamente, en el fichero de R Markdown con 
+extensión `*.Rmd`  y el resultado de compilarlo (un `*.html`). ** Ambos ficheros
+deberán entregarse a través del curso virtual.
+
+Las prácticas que no compilen el fichero `.Rmd` generando un fichero `*.html` válido
+**no serán evaluadas**.
+
+# Tiempos de bloqueo 
+Se está monitorizando la confiabilidad de tres ordenadores de un clúster. Sean
+$X_a$, $X_b$ y $X_c$ los tiempos que transcurren hasta que cada uno de estos
+ordenadores se bloquean y necesitan reiniciarse. Estos "tiempos de bloqueo" 
+son independientes entre sí y tienen distribuciones exponenciales con parámetros
+respectivos $\lambda_a = 2, \lambda_b = 3$ y $\lambda_c = 5$. Sea $M$ el instante 
+de tiempo en que el primero de estos ordenadores falla (¡puede ser cualquier de los
+tres!). Verifica mediante simulaciones que la distribución de M tiene 
+distribución exponencial de parámetro 10. Para ello: 
+
+a. Escribe el código necesario para simular la variable $M$. Guarda el resultado
+de tus simulaciones en la variable `time_sims`. (Pista: las funciones
+`pmin` o `pmax` pueden ser útiles.) 
+
+```{r block_i}
+lambda_a = 2
+lambda_b = 3
+lambda_c = 5
+
+n = 10000
+
+sample_a = rexp(n, rate = lambda_a)
+sample_b = rexp(n, rate = lambda_b)
+sample_c = rexp(n, rate = lambda_c)
+
+time_sims = pmin(sample_a, sample_b, sample_c)
+
+simulated_lambda = 1/mean(time_sims)
+simulated_lambda
+
+```
+
+
+b. Estima la distribución a partir de las simulaciones usando un **histograma** 
+   (función `hist`; consulta la ayuda para dibujar una densidad de probabilidad 
+   en lugar del número de ocurrencias) y...
+c. ... compara el histograma obtenido con la distribución teórica (la 
+   exponencial de parámetro 10). Para ello dibuja en un mismo gráfico la 
+   distribución obtenida  por simulaciones y la distribución teórica 
+   (usando `dexp` y `lines`).
+   
+```{r block_ii_and_iii}
+  hist(time_sims, 100, freq = NULL, breaks = 50, probability = TRUE, col = "darkcyan", main = "Histograma de M")
+
+lambda_M = 10
+
+x = seq(0, max(time_sims), by = 0.01)
+y = dexp(x, rate = lambda_M)
+
+lines(x, y, col = "red", lwd = 2)
+```
+
+# James Bond 
+James Bond está preso en una celda de la que hay tres maneras de escapar: un
+conducto de aire acondicionado, una tubería de alcantarillado y la puerta 
+(¡cuya cerradura no funciona!). El conducto de aire acondicionado lleva al agente 
+007 a un viaje de dos horas, después del cual cae de cabeza a  través de una 
+trampilla, para diversión de sus captores. La tubería de alcantarillado es 
+similar, pero 007 tarda cinco horas en recorrerla antes de caer por otra trampilla.
+Cada caída produce amnesia temporal, y 007 es devuelto a la celda. Después de
+recobrar el conocimiento, James Bond elige inmediatamente una de las tres 
+posibles salidas con probabilidad 1/3. En promedio, ¿cuánto tiempo 
+necesita 007 antes de darse cuenta de que la cerradura de la puerta no funciona?
+
+```{r bond}
+# Hacer una simulación dónde se pueda escoger de tres opciones diferentes: 1. Escapar 
+# por el conducto de aire, 2. Una tubería de alcantarillado, 3. Salir por la puerta(cerradura no funciona). 
+
+n = 10000
+results = numeric(n)
+for (i in 1:n) {
+  tiempo = 0
+  while (TRUE) {
+    opcion = sample(c("A", "T", "P"), 1, prob = c(1/3, 1/3, 1/3))
+    if(opcion == "A"){
+     tiempo = tiempo + 2
+    }else if(opcion == "T"){
+      tiempo = tiempo + 5
+    }
+     else if(opcion == "P"){
+      results[i] = tiempo
+      break
+    }
+  }
+                 
+}
+
+mean(results)
+```
+
+
+# Urnas vacías
+Se distribuyen $r$ bolas en $n$ urnas. Estamos interesados en conocer la 
+distribución de la variable aleatoria U: "número de urnas vacías". Procede
+como sigue. 
+
+a. Escribe una función con prototipo `simulate_u(r, n)` que devuelva una única 
+simulación de U (el número de urnas vacías).
+
+```{r urn_i}
+simulate_u = function(r, n){
+  urnas = rep(0, n)
+  for (i in 1:r) {
+    urna_seleccionada = sample(1:n, 1 , replace = TRUE)
+    urnas[urna_seleccionada] = urnas[urna_seleccionada] + 1
+  }
+  urnas_vacias = sum(urnas == 0)
+ 
+  return(urnas_vacias)
+}
+
+result = simulate_u(10, 7)
+c("Número de urnas vacías:", result)
+
+```
+
+b. Generalmente, usamos simulaciones para calcular la probabilidad de un evento
+en concreto (por ejemplo, para calcular $P(U=2)$). En estas situaciones, tenemos
+una única definición de evento exitoso. Sin embargo, en este problema queremos
+calcular $P(U=u)$ para cualquier valor válido de u... ¡y lo queremos hacer llamando
+una única vez a `replicate`! Esto implica que, para una sola simulación, tendremos
+que comprobar si la simulación ha sido exitosa para todos los valores válidos de u. 
+Genera una simulación de U y escribe cuáles van a ser
+tus comprobaciones de "éxito". Usa, por ejemplo, 10 bolas y 7 urnas.
+
+```{r urn_ii}
+conseguir_probabilidad = function(r, n, u) {
+  total = 0
+  for (i in 1:n) {
+    if (simulate_u(r, n) == u) {
+      total = total + 1
+    }
+  }
+  return(total)
+}
+
+
+#r = 10
+#n = 7
+#u = 2
+
+conseguir_probabilidad(r = 10 , n = 7 , u = 2) / n
+
+
+```
+
+c. Escribe una función con prototipo 
+`distribution_u(r, n, nb_sims)` que calcule mediante simulaciones la 
+función de probabilidad completa para la variable aleatoria U.
+
+```{r urn_iii}
+distribution_u = function (r , n , nb_sims){
+ pr = numeric(n + 1)
+    for(u in 0:n){
+   
+    pr[u + 1] = ((sum(replicate(nb_sims , {conseguir_probabilidad(r , n , u) / n})))/nb_sims)
+    cat("u =", u, ": Probability =", pr[u + 1], "\n")
+    }
+  return (pr)
+}
+
+
+distribution_u(10 , 7 , 1000)
+
+```
+
+d. Usa esta función para dibujar la función de probabilidad de la variable 
+aleatoria "nº de urnas vacías si se distribuyen 10 bolas en 7 urnas".
+
+```{r urn-plot}
+plot(0:7, distribution_u(10, 7, 1000), type = "h", xlab = "Número de urnas vacías", ylab = "Probabilidad")
+
+
+```
+
+# Mensajes maliciosos
+El siguiente modelo "Binomial-Poisson-Exponencial" de tres etapas se utiliza 
+frecuentemente para modelar el flujo de tráfico en redes y autopistas. 
+Consideremos, por ejemplo, el tráfico de correo electrónico malicioso durante un
+intervalo de 1 hora (de 12:00 a 13:00, por ejemplo). Las tres etapas de nuestro 
+modelo son las siguientes:
+
+1. El tráfico de correo electrónico total (malicioso o no) varía de un día a otro
+de forma aleatoria. Para modelar esta variación, podemos asumir que $T$: 
+"ritmo medio de envío de correos electrónicos" tiene distribución exponencial con media
+20 $\frac{\text{mensajes}}{\text{hora}}$. ¿Cuál es, por tanto, el parámetro 
+de la exponencial?
+```{r}
+# En las distribuciones exponenciales el valor de lambda es la tasa media de occurencia de un evento E. Por lo tanto al ser la media la inversa del parámetro lambda, hayamos:
+
+1 / 20
+# Como parámetro de la distribución exponencial.
+
+```
+2. Sea $M$ la variable aleatoria: "número de mensajes maliciosos enviados 
+durante la hora". Si el tráfico de correo electrónico malicioso es $T = t$, 
+entonces $M$ tiene distribución de Poisson con parámetro $0.4 t$. 
+```{r}
+# Ejemplo T = t, con t = 60 porque es una hora
+t = 60
+# n = número de valores aleatorios
+n = 10
+lambda_poisson = 0.4 * t
+probabilidad_poisson = dpois(n, lambda_poisson)
+print(probabilidad_poisson)
+```
+3. No todos los mensajes recibidos $M$ llegan a la bandeja de entrada de 
+nuestros correos electrónicos. De los $M$ mensajes maliciosos recibidos, solo 
+el 12.5\% acaban en la bandeja de entrada (gracias a los filtros de spam y otros 
+filtros de seguridad). Sea la variable aleatoria 
+$B$: "nº de mensajes maliciosos que llegan a la bandeja de entrada". 
+
+Nos interesa poder estimar el número de mensajes maliciosos $M$ a partir de $B$. 
+Sigue los siguientes pasos para hacer una estimación mediante simulaciones:
+
+a. Escribe una función `sim_traffic(n_sims)` para generar simulaciones de las 
+tres  variables aleatorias del problema. Dado que queremos devolver las tres 
+variables aleatorias para cada simulación, el resultado final debe ser una matriz
+de $\text{n_sims} \times 3$. Usa la función `cbind` e intenta evitar el uso 
+de `replicate` por eficiencia.
+
+```{r traffic_i}
+sim_traffic = function(n_sims){
+  # Parámetros del problema
+  lambda <- 1/20  # Parámetro de la exponencial (inverso de la media)
+  t_ratio <- 0.4  # Proporción de mensajes maliciosos
+  b_ratio <- 0.125  # Proporción de mensajes maliciosos que llegan a la bandeja de entrada
+  
+  # Simular el tráfico total de correos electrónicos (T)
+  T <- rexp(n_sims, rate = lambda)
+  
+  # Simular el número de mensajes maliciosos (M)
+  M <- rpois(n_sims, lambda = t_ratio * T)
+  
+  # Simular el número de mensajes maliciosos que llegan a la bandeja de entrada (B)
+  B <- rbinom(n_sims, size = M, prob = b_ratio)
+  
+  # Combinar las tres variables aleatorias en una matriz
+  result <- cbind(T, M, B)
+  
+  return(result)
+}
+
+
+
+```
+
+b. Para nuestros objetivo final, la variable $T$ no es útil, por lo que debemos 
+marginalizarla. Marginalizar por simulaciones es sencillo. En vez de devolver 
+`c(b, m, t)` basta con ignorar `t` y devolver `c(b, m)`. Escribe `sim_messages(n_sims)` 
+para generar  simulaciones de las variables $B$ y $M$. (Ten en cuenta que copiar 
+y pegar código es un crimen contra la humanidad penado por los tribunales 
+internacionales.)
+
+```{r traffic_ii}
+eliminar_columna = function(matriz, columna){
+  matriz_marginalizada = matriz[, -columna]
+  return(matriz_marginalizada)
+}
+
+sim_messages = function(n_sims){
+  columna = 1
+  matriz = sim_traffic(n_sims)
+  return(eliminar_columna(matriz, columna))
+}
+
+```
+
+c. Hoy hemos recibido en nuestra bandeja de entrada $B=b$ mensajes maliciosos. 
+Para estimar $M$ a partir de esta información, calcularemos $P(M=m|B=b).$ 
+Escribe la función `p_m_given_b(m, b, n_sims=10000)` para calcular esta 
+probabilidad condicional usando simulaciones. (Recuerda que, tal y como se vio 
+en clase, a la hora de calcular probabilidades condicionadas tenemos dos 
+condiciones de éxito.)
+
+```{r traffic_iii}
+p_m_given_b = function(m, b, n_sims = 10000){
+  simulaciones_c = sim_messages(n_sims)
+  
+  # Hay que encontrar los valores para los que B = b:
+  filtro_simulaciones_c = simulaciones_c[simulaciones_c[, 1] == b, ]
+  
+  # Si no hay simulaciones donde B = b, devolver NA
+  if (nrow(filtro_simulaciones_c) == 0) {
+    return(NA)
+  }
+  
+  # Sumar valores para los qué M = m:
+  suma_m = sum(filtro_simulaciones_c[, 2] == 2)
+  
+  # Calcular la probabilidad condicional
+  prob_m_dado_b = suma_m / nrow(filtro_simulaciones_c)
+  
+  return(prob_m_dado_b)
+}
+
+
+
+```
+
+d) Imaginemos que hemos recibido $B=2$ mensajes maliciosos en nuestro correo. 
+Dibuja, empleando la función anterior, $P(M=m|b=2)$ y halla cuál es el valor de 
+$M$ más probable (la moda). Para hacer el plot, vectoriza previamente
+la función con `Vectorize` y usa un gran número de simulaciones.
+
+```{r traffic_iv, cache=TRUE}
+p_m_given_b = Vectorize(p_m_given_b)
+
+n_sims = 100000
+posibles_valores_M = 0:100
+probabilidad_condicional_deseada = p_m_given_b(m = posibles_valores_M, b = 2, n_sims = n_sims)
+
+plot(posibles_valores_M, probabilidad_condicional_deseada, type = "h")
+
+moda = posibles_valores_M[which.max(probabilidad_condicional_deseada)]
+print(paste("Moda de M:", moda))
+```
+
+**Indica aquí cuál es el valor más probable**
+
+# (VOLUNTARIO) El problema del secretario
+Este problema, conocido como el problema del secretario, apareció en la columna
+de problemas matemáticas de Martin Gardner, en *Scientific American*. Originalmente,
+el enunciado trataba de encontrar la estrategia óptima para que un directivo 
+eligiese de forma óptima al secretario más competente entre un grupo de $n$ 
+candidatos. Sin embargo, también se ha aplicado a muchos otros casos 
+interesantes, incluyendo el cálculo del número de citas (con personas distintas)
+que debes de tener antes de "sentar la cabeza" y maximizar tus probabilidades
+de elegir a tu marido/esposa ideal. En lo que sigue, nosotros formulamos el 
+problema en términos de una lista de n números.
+
+En $n$ trozos de papel, escribimos $n$ números distintos (que pueden tomar cualquier
+valor positivo). Sea $M$ es el número más grande. El juego consiste en que se te
+irán mostrando los trozos de papel  uno a uno, y tu tienes que decidir si quedarte
+con el número que ves (y el juego acaba) o si lo rechazas y pides otro número. Una vez
+rechazado un número, no puedes volver atrás y elegir un número ya visto (¿puedes 
+ver el paralelismo con las citas?). Tu objetivo es elegir el número más grande, 
+$M$. Ten en cuenta que cuando se te enseña el número k-ésimo, sólo cuentas con 
+la información relativa a los $k-1$ números anteriores.
+
+Aunque el problema es difícil, existe una estrategia que da buenos resultados: 
+Para algún número $r$ entre 0 y n, rechazas los $r$ primeros números y luego
+seleccionas el primer número que sea mejor que los primeros $r$. Sigue los siguientes 
+pasos para resolver el problema:
+
+a) Implementa las funciones necesarias para simular esta estrategia para cualquier
+$r$ y cualquier $n$:
+    
+* `simulate_game`: recibe `r` y `n` y simula una sola realización del juego.
+Devuelve `TRUE` si se acierta $M$ y `FALSE` en caso contrario.
+* `estimate_probability`: recibe `r`, `n` y `nb_sims` (número de simulaciones)
+y hace uso de la función `simulate_game` para calcular la probabilidad de acertar 
+$M$ usando la estrategia de rechazar los $r$ primeros. 
+
+```{r secretary_i}
+
+```
+
+
+
+b) Aplica tus funciones al caso $n$ = 20 y calcula las probabilidades, $p_r$,
+de acertar $M$ con la estrategia de rechazar los $r$ primeros números para 
+todo número $r$ válido.
+
+```{r secretary_ii}
+
+```
+
+
+c) Dibuja $p_r$ Vs. $r$.
+
+```{r secretary_iii}
+
+```
+
+d) En base al gráfico anterior, ¿cuál es la mejor estrategia para $n=20$? ¿Cuál es
+la probabilidad de  acertar $M$ con esta estrategia?
+
+*Contesta aquí*
+
+
